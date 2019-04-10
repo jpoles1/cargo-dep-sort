@@ -1,0 +1,9 @@
+[package]
+name = "cargo-dep-sort"
+version = "0.1.0"
+authors = ["Jordan Poles <jpoles1@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+toml = "0.5.0"
+serde = { version = "1.0", features = ["derive"] }
