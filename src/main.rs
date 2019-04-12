@@ -1,11 +1,13 @@
 extern crate regex;
+extern crate clap;
+
+use clap::{Arg, App};
 use std::fs;
 use regex::Regex;
 
 fn load_toml(filename: &str) -> String {
     let toml_raw = fs::read_to_string(filename)
         .expect("Something went wrong reading the file");
-    println!("Loaded in TOML data:\n{}", toml_raw);
     return toml_raw
 }
 
@@ -39,6 +41,7 @@ fn check_cargo_toml_sorted(toml_headers:Vec<String>, toml_tables:Vec<String>) ->
     ];
     for (toml_header, toml_table) in toml_headers.iter().zip(toml_tables.iter()) {
         if included_headers.contains(&&**toml_header) {
+            println!("Checking if {} is sorted...", toml_header);
             if !check_table_sorted(toml_table.to_string()) {
                 return Some(toml_header.to_string())
             }
@@ -48,13 +51,23 @@ fn check_cargo_toml_sorted(toml_headers:Vec<String>, toml_tables:Vec<String>) ->
 }
 
 fn main() {
-    let toml_string = load_toml("test_data/rustlings.toml");
+    let matches = App::new("cargo-dep-sort")
+        .author("Jordan Poles <jpdev.noreply@gmail.com>")
+        .about("Helps ensure sorting of Cargo.toml file dependency list")
+        .arg(Arg::with_name("INPUT")
+            .help("Sets the Cargo.toml file to check")
+            .required(true)
+            .index(1))
+        .get_matches();
+
+    let toml_string = load_toml(matches.value_of("INPUT").unwrap());
     let (toml_headers, toml_tables) = split_toml(toml_string);
     let toml_sort_result = check_cargo_toml_sorted(toml_headers, toml_tables);
     if toml_sort_result.is_some() {
-        eprintln!("Found unsorted TOML table: {}", toml_sort_result.unwrap());
+        eprintln!("Error: found unsorted Cargo.toml table: {}", toml_sort_result.unwrap());
         std::process::exit(65);
     }
+    println!("Success: the detected Cargo.toml tables are properly sorted!");
     std::process::exit(0);
 }
 
