@@ -50,6 +50,9 @@ fn check_cargo_toml_sorted(toml_headers:Vec<String>, toml_tables:Vec<String>) ->
     return None
 }
 
+//TODO: implement unit/integration tests for all major functions
+//TODO: write functions to write a properly sorted Cargo.toml file to disk
+
 fn main() {
     let matches = App::new("cargo-dep-sort")
         .author("Jordan Poles <jpdev.noreply@gmail.com>")
