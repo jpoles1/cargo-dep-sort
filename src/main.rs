@@ -27,10 +27,7 @@ fn load_toml_file(toml_filepath: &str) -> toml::Value {
     //Fetch toml data
     let toml_raw = load_file_contents(toml_filepath);
     let toml_data = toml::de::from_str(&toml_raw);
-    if toml_data.is_err() {
-        panic!("ERROR: Failed to read improperly formatted TOML file!")
-    }
-    return toml_data.unwrap()
+    return toml_data.expect("ERROR: Failed to read improperly formatted TOML file!")
 }
 
 fn check_table_sorted(toml_table : &toml::value::Table) -> bool {
@@ -76,8 +73,10 @@ fn main() {
             .required(true)
             .index(1))
         .get_matches();
+    //Get TOML data from file provided in cmd arg
     let toml_filepath = matches.value_of("INPUT").unwrap();
     let toml_data = load_toml_file(toml_filepath);
+    //Check if appropriate tables in file are sorted
     let toml_sort_result = check_cargo_toml_sorted(toml_data);
     if toml_sort_result.is_some() {
         eprintln!("FAIL: found unsorted Cargo.toml table: {}", toml_sort_result.unwrap());
