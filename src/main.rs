@@ -60,6 +60,31 @@ fn check_cargo_toml_sorted(toml_data : toml::Value) -> Option<String> {
     return None
 }
 
+fn write_to_cargo(toml_data : toml::Value, s_add: String) -> Option<String> {
+    let included_headers : Vec<&str> = vec![
+        "dependencies", 
+        "dev-dependencies",
+        "build-dependencies",
+        "workspace.members",
+        "workspace.exclude",
+    ];
+
+    let mut s = String::default();
+    for table_header in included_headers.iter() {
+        if toml_data.get(table_header).is_some() {
+            let toml_table = toml_data.get(table_header).unwrap().as_table();
+            if toml_table.is_some() {
+                if !check_table_sorted(toml_table.unwrap()) {
+                    return Some(table_header.to_string())
+                }
+            }
+        }
+
+    }
+    return None
+}
+
+
 //TODO: implement unit/integration tests for all major functions
 //TODO: write functions to write a properly sorted Cargo.toml file to disk
 
