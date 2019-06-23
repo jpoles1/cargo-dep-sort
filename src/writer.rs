@@ -42,7 +42,10 @@ impl TomlWriter {
         let mut pos = after_header;
         loop {
             // read eol number of bytes
-            curse.read_exact(&mut window_buf).expect("read failed");
+            match curse.read_exact(&mut window_buf) {
+                Ok(_) => {},
+                Err(e) => {},
+            }
             // make sure we dont split and not read the right bytes in a row
             pos += window_buf.len() - 1;
             curse.set_position((pos - 1) as u64);
