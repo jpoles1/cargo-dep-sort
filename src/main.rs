@@ -49,7 +49,8 @@ fn check_table_sorted(toml_table: &toml::value::Table) -> Option<String> {
 
     match dep_table == sorted_table {
         true => None,
-        false => Some(sorted_table.join("\r\n")),
+        // TODO: cross platform
+        false => Some(sorted_table.join("\n")),
     }
 }
 
@@ -154,12 +155,14 @@ fn main() -> std::io::Result<()> {
         if let Some(vals) = toml_data.get(header) {
             if let Some(table) = vals.as_table() {
                 if let Some(new_deps_table) = check_table_sorted(table) {
-                    tw.replace_dep(header, new_deps_table)?;
+                    // TODO: fix for windows
+                    let full_header = format!("[{}]\n", header);
+                    tw.replace_dep(&full_header, new_deps_table)?;
                 }
             }
         }
     }
-    tw.write_all_changes("./test_data/test.toml")
+    tw.write_all_changes("./test_data/test2.toml")
     //let toml_sort_result = check_cargo_toml_sorted(toml_data, );
     // if toml_sort_result.is_some() {
     //     eprintln!("FAIL: found unsorted Cargo.toml table: {}", toml_sort_result.unwrap());
