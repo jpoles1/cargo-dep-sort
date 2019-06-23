@@ -1,17 +1,16 @@
-use std::fs::{File, OpenOptions};
-use std::io::BufReader;
-use std::io::{BufRead, BufWriter, Read, Write};
+use std::fs;
+use std::fs::{ File, OpenOptions };
+use std::env;
+use std::path::{ PathBuf, };
 
-extern crate clap;
-extern crate regex;
-extern crate toml;
 
 use clap::{App, Arg};
+use colored::{ Colorize };
 use regex::Regex;
-use std::fs;
 
 mod writer;
 use writer::TomlWriter;
+mod utils;
 
 //Checks if filepath points to a .toml file
 fn is_toml_filepath(filepath: &str) -> bool {
@@ -22,28 +21,36 @@ fn is_toml_filepath(filepath: &str) -> bool {
 //Takes a file path and reads its contents in as plain text
 fn load_file_contents(filepath: &str) -> String {
     let file_contents =
-        fs::read_to_string(filepath).expect("ERROR: Something went wrong reading the file");
+        fs::read_to_string(filepath)
+        .expect(&format!("{} Something went wrong reading the file", "ERROR:".red()));
     return file_contents;
 }
 
-fn load_toml_file(toml_filepath: &str) -> String {
+fn load_toml_file(toml_filepath: &str) -> Option<String> {
     //Check if a valid .toml filepath
     if !is_toml_filepath(toml_filepath) {
-        eprintln!(
-            "WARN: detected invalid path to .toml file:\n{}",
+        eprintln!("{}", &format!("{} detected invalid path to .toml file:\n{}",
+            "ERROR:".red(),
             toml_filepath
-        )
+        ));
+        return None
     }
     //Fetch toml data
-    load_file_contents(toml_filepath)
+    Some(load_file_contents(toml_filepath))
 }
 
 /// Returns the string if it needed sorting else None
 /// sorts including version
 fn check_table_sorted(toml_table: &toml::value::Table) -> Option<String> {
-    let dep_table: Vec<String> = toml_table.iter()
-        .map(|(key, val)| format!("{}={}", key, val)).collect();
-
+    //println!("{:#?}", toml_table);
+    let mut s = String::default();
+    for pair in toml_table.iter() {
+        utils::expand_table(pair, &mut s);
+    }
+    println!("{}", s);
+    // let dep_table: Vec<String> = toml_table.iter()
+    //     .map(move |p| expand_table(p, s)).collect();
+    let dep_table: Vec<&str> = s.split("\n").collect();
     let mut sorted_table = dep_table.clone();
     sorted_table.sort_unstable();
 
@@ -53,73 +60,6 @@ fn check_table_sorted(toml_table: &toml::value::Table) -> Option<String> {
         false => Some(sorted_table.join("\n")),
     }
 }
-
-// fn check_cargo_toml_sorted(table_header: String, toml_data: toml::Value) -> Option<String> {
-//     if let Some(vals) = toml_data.get(table_header) {
-//         if let Some(table) = vals.as_table() {
-//             if let Some(new_deps_table) = check_table_sorted(table) {
-//                 Some(new_deps_table);
-//             }
-//         }
-//     }
-//     None
-// }
-
-// fn read_to(sorted: &String, seek_to: &str, fd: &mut File) -> std::io::Result<String> {
-//     let file = fd.try_clone()?;
-//     let mut reader = BufReader::new(file);
-//     let mut bytes: Vec<u8> = Vec::default();
-//     // read to header
-//     loop {
-//         if reader.read(&mut bytes)? == 0 {
-//             continue;
-//         } else {
-//             match bytes.windows(seek_to.len()).position(|win| win == seek_to.as_bytes()) {
-//                 Some(pos) => {
-//                     println!("found {}", seek_to);
-
-//                     return write_from(pos + seek_to.len(), sorted)
-//                 },
-//                 None => continue,
-//             }
-//         }
-//     }
-//     Ok(0)
-// }
-
-// fn replace_unsorted<'s>(
-//     pos: usize,
-//     sorted: &String,
-//     mut base: String,
-// ) -> std::io::Result<String> {
-//     //let (first, end) = base.split_at_mut(pos);
-//     base.replace_range(pos..pos + sorted.len(), sorted);
-//     Ok(base)
-// }
-
-// fn write_to_toml(
-//     path: &str,
-//     contents: &String,
-//     sorted: &String,
-//     seek_to: &str,
-// ) -> std::io::Result<()> {
-//     match contents
-//         .as_bytes()
-//         .windows(seek_to.len())
-//         .position(|win| win == seek_to.as_bytes())
-//     {
-//         Some(pos) => {
-//             println!("found {}", seek_to);
-
-//             let sort_file = replace_unsorted(pos + seek_to.len(), sorted, contents.clone())?;
-//             println!("sorted {}", sort_file);
-//             let mut fd = File::open(path)?;
-//             fd.write_all(sort_file.as_bytes())?;
-//             fd.flush()
-//         }
-//         None => Ok(()),
-//     }
-// }
 
 //TODO: implement unit/integration tests for all major functions
 //TODO: write functions to write a properly sorted Cargo.toml file to disk
@@ -136,18 +76,37 @@ fn main() -> std::io::Result<()> {
     let matches = App::new("cargo-dep-sort")
         .author("Jordan Poles <jpdev.noreply@gmail.com>")
         .about("Helps ensure sorting of Cargo.toml file dependency list")
-        .arg(
-            Arg::with_name("INPUT")
-                .help("Sets the Cargo.toml file to check")
-                .required(true)
-                .index(1),
-        )
+        .arg(Arg::with_name("cwd")
+                .short("c")
+                .long("cwd")
+                .value_name("CWD")
+                .help("Sets cwd, must contain Cargo.toml")
+                .takes_value(true))
         .get_matches();
-    //Get TOML data from file provided in cmd arg
-    let toml_filepath = matches.value_of("INPUT").unwrap();
-    let mut toml_raw = load_toml_file(toml_filepath);
+
+    
+    let cwd = env::current_dir()
+        .expect(&format!("{} could not get cwd", "ERROR:".red()));
+
+    // either default cwd or user selected
+    let mut path = matches.value_of("cwd")
+        .map_or(cwd, |s| PathBuf::from(s.to_owned()));
+    match path.extension() {
+        None => {
+            path.push("Cargo.toml");
+        },
+        _ => {},
+    }
+
+    println!("{:#?}", path);
+
+    let toml_raw = match load_toml_file(path.to_str().unwrap()) {
+        Some(t) => t,
+        None => std::process::exit(64),
+    };
+
     let toml_data: toml::Value = toml::de::from_str(&toml_raw)
-        .expect("ERROR: Failed to read improperly formatted TOML file!");
+        .expect(&format!("{} Failed to read improperly formatted TOML file!", "ERROR:".red()));
 
     let mut tw = TomlWriter::new(toml_raw);
     //Check if appropriate tables in file are sorted
@@ -155,21 +114,19 @@ fn main() -> std::io::Result<()> {
         if let Some(vals) = toml_data.get(header) {
             if let Some(table) = vals.as_table() {
                 if let Some(new_deps_table) = check_table_sorted(table) {
-                    // TODO: fix for windows
+                    println!("{}", new_deps_table);
+                    // TODO: cross platform
                     let full_header = format!("[{}]\n", header);
                     tw.replace_dep(&full_header, new_deps_table)?;
                 }
             }
         }
     }
-    tw.write_all_changes("./test_data/test2.toml")
-    //let toml_sort_result = check_cargo_toml_sorted(toml_data, );
-    // if toml_sort_result.is_some() {
-    //     eprintln!("FAIL: found unsorted Cargo.toml table: {}", toml_sort_result.unwrap());
-    //     std::process::exit(65);
-    // }
-    // println!("PASS: the detected Cargo.toml file is properly sorted!");
-    // std::process::exit(0);
+
+    tw.write_all_changes("./test_data/test.toml")?;
+
+    println!("{} dependencies have been sorted!", "Success".bold().bright_green());
+    Ok(())
 }
 
 #[cfg(test)]

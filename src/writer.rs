@@ -1,5 +1,4 @@
 use std::fs::{ OpenOptions, };
-use std::path::{ PathBuf, };
 use std::io::{ Read, Write};
 
 
@@ -27,7 +26,8 @@ impl TomlWriter {
         sorted: String,
     ) {
         let eo_table = String::from_utf8_lossy(&self.eo_table);
-        let fmt_sort = format!("{}{}", sorted, "\n");
+        let fmt_sort = format!("{}{}", sorted, eo_table);
+
         let end = self.unsorted_len(pos).expect("unsorted failed");
         self.contents.replace_range(pos..end, &fmt_sort)
     }
@@ -76,7 +76,6 @@ impl TomlWriter {
     }
 
     pub fn write_all_changes(&self, path: &str) -> std::io::Result<()> {
-        let p = PathBuf::from(path);
         let mut fd = OpenOptions::new()
             .write(true)
             .create(true)
