@@ -6,24 +6,23 @@ edition = "2018"
 
 [dependencies]
 clap = "2.32.0"
-indicatif = "0.9.0"
 console = "0.6.2"
-syntect = "3.0.2"
+indicatif = "0.9.0"
 notify = "4.0.0"
+syntect = "3.0.2"
 toml = "0.4.10"
 
 [build-dependencies]
-not-help="9.0"
-oyea="1.0"
-zoo="1"
-abc="2"
+abc = "2"
+not-help = "9.0"
+oyea = "1.0"
+zoo = "1"
 
 [[bin]]
 name = "rustlings"
 path = "src/main.rs"
 
 [dev-dependencies]
-helper="0.1"
+always-sunny = "0.1"
 assert_cmd = "0.11.0"
-always-sunny="0.1"
-
+helper = "0.1"
