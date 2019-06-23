@@ -47,9 +47,7 @@ fn check_table_sorted(toml_table: &toml::value::Table) -> Option<String> {
     for pair in toml_table.iter() {
         utils::expand_table(pair, &mut s);
     }
-    println!("{}", s);
-    // let dep_table: Vec<String> = toml_table.iter()
-    //     .map(move |p| expand_table(p, s)).collect();
+
     let dep_table: Vec<&str> = s.split("\n").collect();
     let mut sorted_table = dep_table.clone();
     sorted_table.sort_unstable();
@@ -100,7 +98,7 @@ fn main() -> std::io::Result<()> {
 
     println!("{:#?}", path);
 
-    let toml_raw = match load_toml_file(path.to_str().unwrap()) {
+    let mut toml_raw = match load_toml_file(path.to_str().unwrap()) {
         Some(t) => t,
         None => std::process::exit(64),
     };
@@ -108,7 +106,7 @@ fn main() -> std::io::Result<()> {
     let toml_data: toml::Value = toml::de::from_str(&toml_raw)
         .expect(&format!("{} Failed to read improperly formatted TOML file!", "ERROR:".red()));
 
-    let mut tw = TomlWriter::new(toml_raw);
+    let mut tw = TomlWriter::new(&mut toml_raw);
     //Check if appropriate tables in file are sorted
     for header in included_headers.iter() {
         if let Some(vals) = toml_data.get(header) {
@@ -116,7 +114,7 @@ fn main() -> std::io::Result<()> {
                 if let Some(new_deps_table) = check_table_sorted(table) {
                     println!("{}", new_deps_table);
                     // TODO: cross platform
-                    let full_header = format!("[{}]\n", header);
+                    let full_header = format!("[{}]", header);
                     tw.replace_dep(&full_header, new_deps_table)?;
                 }
             }

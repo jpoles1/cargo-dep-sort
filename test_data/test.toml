@@ -1,13 +1,28 @@
 [package]
-name = "cargo-dep-sort"
-version = "0.1.0"
-authors = ["Jordan Poles <jpoles1@gmail.com>"]
+name = "rustlings"
+version = "1.1.0"
+authors = ["Olivia <819880950@qq.com>", "Carol (Nichols || Goulding) <carol.nichols@gmail.com"]
 edition = "2018"
 
 [dependencies]
+clap = "2.32.0"
+console = "0.6.2"
+indicatif = "0.9.0"
+notify = "4.0.0"
+syntect = "3.0.2"
+toml = "0.4.10"
 
-clap = "2.33.0"
-colored = "1.8"
-regex = "1.1.5"
-toml = { version = "0.5", features = ["preserve_order"] }
+[build-dependencies]
+abc = "2"
+not-help = "9.0"
+oyea = "1.0"
+zoo = "1"
 
+[[bin]]
+name = "rustlings"
+path = "src/main.rs"
+
+[dev-dependencies]
+always-sunny = "0.1"
+assert_cmd = "0.11.0"
+helper = "0.1"
